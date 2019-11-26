@@ -5,7 +5,6 @@ import boto3
 D = 7
 found = 0
 block = "COMSM0010cloud"
-nonce = 65536
 i = -1
 sqs = boto3.client('sqs')
 URL = sqs.get_queue_url(QueueName='Task.fifo')
@@ -34,7 +33,7 @@ def compute(k):
 checkstr = ""
 for j in range(0, D):
     checkstr = checkstr + "0"
-
+    
 sqs.send_message(
         QueueUrl=resultURL,
         DelaySeconds=0,
@@ -51,13 +50,13 @@ for receive in range(1, 33, 1):
         break
     content = sqs.receive_message(
         QueueUrl=queue_url,
-        AttributeNames=[
-            'SentTimestamp'
-        ],
+        # AttributeNames=[
+        #     'All'
+        # ],
         MaxNumberOfMessages=1,
-        MessageAttributeNames=[
-            'All'
-        ],
+        # MessageAttributeNames=[
+        #     'All'
+        # ],
         VisibilityTimeout=3000,
         WaitTimeSeconds=0
     )
