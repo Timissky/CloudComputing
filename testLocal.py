@@ -15,7 +15,7 @@ checkstr = ""
 for j in range(0, D):
     checkstr = checkstr + "0"
 
-for receive in range(1, 10, 1):
+for receive in range(1, 50, 1):
     if found == 1:
         break
     content = sqs.receive_message(
@@ -27,7 +27,7 @@ for receive in range(1, 10, 1):
         MessageAttributeNames=[
             'All'
         ],
-        VisibilityTimeout=300,
+        VisibilityTimeout=3000,
         WaitTimeSeconds=0
     )
     message = content['Messages'][0]
