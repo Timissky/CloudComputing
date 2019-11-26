@@ -45,7 +45,7 @@ sqs.send_message(
             "begin"
         )
     )
-for receive in range(1, 33, 1):
+for receive in range(1, 50, 1):
     if found == 1:
         break
     content = sqs.receive_message(
