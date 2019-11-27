@@ -18,7 +18,7 @@ def compute(k):
     return result
 
 
-D = 5
+D = 7
 found = 0
 block = "COMSM0010cloud"
 sqs = boto3.client('sqs')
