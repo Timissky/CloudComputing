@@ -63,7 +63,7 @@ for receive in range(1, 50, 1):
     receipt_handle = message['ReceiptHandle']
     taskUnit = int(message['Body'])
 
-    for num in range(2097152*(taskUnit-1)+1, 2097152*taskUnit+1, 1):
+    for num in range(8388608*(taskUnit-1)+1, 8388608*taskUnit+1, 1):
         result = compute(num)
         if result[0:D] == checkstr:
             found = 1
