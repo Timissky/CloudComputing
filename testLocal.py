@@ -2,17 +2,6 @@ import hashlib
 import time
 import boto3
 
-D = 7
-found = 0
-block = "COMSM0010cloud"
-i = -1
-sqs = boto3.client('sqs')
-URL = sqs.get_queue_url(QueueName='Task.fifo')
-queue_url = URL['QueueUrl']
-response = sqs.get_queue_url(QueueName='Result.fifo')
-resultURL = response['QueueUrl']
-
-
 def compute(k):
     # i = i+1
     x = hashlib.sha256()
@@ -28,12 +17,22 @@ def compute(k):
     result = y.hexdigest()
     return result
 
+
+D = 5
+found = 0
+block = "COMSM0010cloud"
+sqs = boto3.client('sqs')
+URL = sqs.get_queue_url(QueueName='Task.fifo')
+queue_url = URL['QueueUrl']
+response = sqs.get_queue_url(QueueName='Result.fifo')
+resultURL = response['QueueUrl']
+
 # record the begin time
 
 checkstr = ""
 for j in range(0, D):
     checkstr = checkstr + "0"
-    
+
 sqs.send_message(
         QueueUrl=resultURL,
         DelaySeconds=0,
@@ -50,13 +49,13 @@ for receive in range(1, 50, 1):
         break
     content = sqs.receive_message(
         QueueUrl=queue_url,
-        # AttributeNames=[
-        #     'All'
-        # ],
+        AttributeNames=[
+            'All'
+        ],
         MaxNumberOfMessages=1,
-        # MessageAttributeNames=[
-        #     'All'
-        # ],
+        MessageAttributeNames=[
+            'All'
+        ],
         VisibilityTimeout=3000,
         WaitTimeSeconds=0
     )
