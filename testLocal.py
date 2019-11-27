@@ -82,15 +82,15 @@ for receive in range(1, 50, 1):
             sqs.send_message(
                 QueueUrl=resultURL,
                 DelaySeconds=0,
-                MessageGroupId='1',
-                MessageDeduplicationId='1',
+                MessageGroupId=str(num),
+                MessageDeduplicationId=str(num),
                 MessageAttributes={
                 },
                 MessageBody=(
                     str(num)
                 )
             )
-            break
+            # break
     sqs.delete_message(
         QueueUrl=queue_url,
         ReceiptHandle=receipt_handle
