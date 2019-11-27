@@ -2,23 +2,24 @@ import hashlib
 import time
 import boto3
 
-def compute(k):
-    # i = i+1
-    x = hashlib.sha256()
-    y = hashlib.sha256()
-    code = block + str(k)
-    # code = block+"0000000000"
-    # print ("code= ",code)
-    x.update(code.encode("utf-8"))
-    temstr = x.hexdigest()
-    # print("temstr= ",temstr)
 
-    y.update(temstr.encode("utf-8"))
-    result = y.hexdigest()
-    return result
+# def compute(k):
+#     # i = i+1
+#     x = hashlib.sha256()
+#     y = hashlib.sha256()
+#     code = block + str(k)
+#     # code = block+"0000000000"
+#     # print ("code= ",code)
+#     x.update(code.encode("utf-8"))
+#     temstr = x.hexdigest()
+#     # print("temstr= ",temstr)
+#
+#     y.update(temstr.encode("utf-8"))
+#     result = y.hexdigest()
+#     return result
 
 
-D = 7
+D = 8
 found = 0
 block = "COMSM0010cloud"
 sqs = boto3.client('sqs')
@@ -27,12 +28,12 @@ queue_url = URL['QueueUrl']
 response = sqs.get_queue_url(QueueName='Result.fifo')
 resultURL = response['QueueUrl']
 
-# record the begin time
-
 checkstr = ""
 for j in range(0, D):
     checkstr = checkstr + "0"
 
+
+# record the begin time
 sqs.send_message(
         QueueUrl=resultURL,
         DelaySeconds=0,
@@ -63,8 +64,18 @@ for receive in range(1, 50, 1):
     receipt_handle = message['ReceiptHandle']
     taskUnit = int(message['Body'])
 
-    for num in range(8388608*(taskUnit-1)+1, 8388608*taskUnit+1, 1):
-        result = compute(num)
+    for num in range(33554433*(taskUnit-1)+1, 33554433*taskUnit+1, 1):
+        x = hashlib.sha256()
+        y = hashlib.sha256()
+        code = block + str(num)
+        # code = block+"0000000000"
+        # print ("code= ",code)
+        x.update(code.encode("utf-8"))
+        temstr = x.hexdigest()
+        # print("temstr= ",temstr)
+
+        y.update(temstr.encode("utf-8"))
+        result = y.hexdigest()
         if result[0:D] == checkstr:
             found = 1
             print("nonce = %s" % num)
