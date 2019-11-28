@@ -18,93 +18,119 @@ import boto3
 #     result = y.hexdigest()
 #     return result
 
-
-D = 8
+# Difficulty
+D = 9
+# The result of founding nonce
 found = 0
 block = "COMSM0010cloud"
 sqs = boto3.client('sqs')
-URL = sqs.get_queue_url(QueueName='Task.fifo')
-queue_url = URL['QueueUrl']
+response = sqs.get_queue_url(QueueName='Task.fifo')
+queue_url = response['QueueUrl']
+response = sqs.get_queue_url(QueueName='Log.fifo')
+log_url = response['QueueUrl']
 response = sqs.get_queue_url(QueueName='Result.fifo')
-resultURL = response['QueueUrl']
+result_url = response['QueueUrl']
 
 checkstr = ""
 for j in range(0, D):
     checkstr = checkstr + "0"
 
-
-# record the begin time
-sqs.send_message(
-        QueueUrl=resultURL,
-        DelaySeconds=0,
-        MessageGroupId='begin',
-        MessageDeduplicationId='begin',
-        MessageAttributes={
-        },
-        MessageBody=(
-            "begin"
+try:
+    for receive in range(1, 1000, 1):
+        if found == 1:
+            break
+        content = sqs.receive_message(
+            QueueUrl=queue_url,
+            AttributeNames=[
+                'All'
+            ],
+            MaxNumberOfMessages=1,
+            MessageAttributeNames=[
+                'All'
+            ],
+            VisibilityTimeout=43100,
+            WaitTimeSeconds=0
         )
-    )
-for receive in range(1, 50, 1):
-    if found == 1:
-        break
-    content = sqs.receive_message(
-        QueueUrl=queue_url,
-        AttributeNames=[
-            'All'
-        ],
-        MaxNumberOfMessages=1,
-        MessageAttributeNames=[
-            'All'
-        ],
-        VisibilityTimeout=3000,
-        WaitTimeSeconds=0
-    )
-    message = content['Messages'][0]
-    receipt_handle = message['ReceiptHandle']
-    taskUnit = int(message['Body'])
+        message = content['Messages'][0]
+        receipt_handle = message['ReceiptHandle']
+        # define which task the instance received
+        taskUnit = int(message['Body'])
+        N = int(message['MessageAttributes']['Total']['StringValue'])
+        unitLength = int(67108864/ N)
+        unitBegin = unitLength * (taskUnit - 1)
+        #4294967296
+        if taskUnit == N:
+            unitStop = 67108864 + 1
+        else:
+            unitStop = unitLength * taskUnit
+        #################################################
+    # record the time unit begin
+        sqs.send_message(
+            QueueUrl=log_url,
+            DelaySeconds=0,
+            MessageGroupId=str(taskUnit),
+            MessageDeduplicationId=str(taskUnit),
+            MessageAttributes={
+            },
+            MessageBody=(
+                "Unit " + str(taskUnit) + " begin"
+            )
+        )
 
-    for num in range(33554433*(taskUnit-1)+1, 33554433*taskUnit+1, 1):
-        x = hashlib.sha256()
-        y = hashlib.sha256()
-        code = block + str(num)
-        # code = block+"0000000000"
-        # print ("code= ",code)
-        x.update(code.encode("utf-8"))
-        temstr = x.hexdigest()
-        # print("temstr= ",temstr)
+        for num in range(unitBegin, unitStop, 1):
+            x = hashlib.sha256()
+            y = hashlib.sha256()
+            code = block + str(num)
+            # code = block+"0000000000"
+            # print ("code= ",code)
+            x.update(code.encode("utf-8"))
+            temstr = x.hexdigest()
+            # print("temstr= ",temstr)
 
-        y.update(temstr.encode("utf-8"))
-        result = y.hexdigest()
-        if result[0:D] == checkstr:
-            found = 1
-            print("nonce = %s" % num)
-            sqs.send_message(
-                QueueUrl=resultURL,
+            y.update(temstr.encode("utf-8"))
+            result = y.hexdigest()
+            if result[0:D] == checkstr:
+                found = 1
+                print("nonce = %s" % num)
+                sqs.send_message(
+                    QueueUrl=result_url,
+                    DelaySeconds=0,
+                    MessageGroupId=str(num),
+                    MessageDeduplicationId=str(num),
+                    MessageAttributes={
+                    },
+                    MessageBody=(
+                        str(num)
+                    )
+                )
+                # break
+        sqs.delete_message(
+            QueueUrl=queue_url,
+            ReceiptHandle=receipt_handle
+        )
+        print('processed and deleted message: %s' % taskUnit)
+        # record the time unit finish
+        sqs.send_message(
+                QueueUrl=log_url,
                 DelaySeconds=0,
-                MessageGroupId=str(num),
-                MessageDeduplicationId=str(num),
+                MessageGroupId=str(taskUnit)+"end",
+                MessageDeduplicationId=str(taskUnit)+"end",
                 MessageAttributes={
                 },
                 MessageBody=(
-                    str(num)
+                    "Unit " + str(taskUnit) + " end"
                 )
             )
-            # break
-    sqs.delete_message(
-        QueueUrl=queue_url,
-        ReceiptHandle=receipt_handle
-    )
-    print('processed and deleted message: %s' % taskUnit)
-sqs.send_message(
-        QueueUrl=resultURL,
+except:
+    sqs.send_message(
+        QueueUrl=log_url,
         DelaySeconds=0,
-        MessageGroupId='end',
-        MessageDeduplicationId='end',
+        MessageGroupId=str(taskUnit) + "free",
+        MessageDeduplicationId=str(taskUnit) + "free",
         MessageAttributes={
         },
         MessageBody=(
-            "end"
+                "No more task after unit " + str(taskUnit)
         )
     )
 
