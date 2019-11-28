@@ -3,44 +3,26 @@ import time
 import boto3
 
 
-# def compute(k):
-#     # i = i+1
-#     x = hashlib.sha256()
-#     y = hashlib.sha256()
-#     code = block + str(k)
-#     # code = block+"0000000000"
-#     # print ("code= ",code)
-#     x.update(code.encode("utf-8"))
-#     temstr = x.hexdigest()
-#     # print("temstr= ",temstr)
-#
-#     y.update(temstr.encode("utf-8"))
-#     result = y.hexdigest()
-#     return result
-
 # Difficulty
-D = 9
+# D = 8
 # The result of founding nonce
 found = 0
 block = "COMSM0010cloud"
 sqs = boto3.client('sqs')
 response = sqs.get_queue_url(QueueName='Task.fifo')
-queue_url = response['QueueUrl']
+task_url = response['QueueUrl']
 response = sqs.get_queue_url(QueueName='Log.fifo')
 log_url = response['QueueUrl']
 response = sqs.get_queue_url(QueueName='Result.fifo')
 result_url = response['QueueUrl']
 
-checkstr = ""
-for j in range(0, D):
-    checkstr = checkstr + "0"
 
 try:
     for receive in range(1, 1000, 1):
         if found == 1:
             break
         content = sqs.receive_message(
-            QueueUrl=queue_url,
+            QueueUrl=task_url,
             AttributeNames=[
                 'All'
             ],
@@ -56,6 +38,7 @@ try:
         # define which task the instance received
         taskUnit = int(message['Body'])
         N = int(message['MessageAttributes']['Total']['StringValue'])
+        D = int(message['MessageAttributes']['Difficulty']['StringValue'])
         unitLength = int(67108864/ N)
         unitBegin = unitLength * (taskUnit - 1)
         #4294967296
@@ -63,8 +46,11 @@ try:
             unitStop = 67108864 + 1
         else:
             unitStop = unitLength * taskUnit
-        #################################################
-    # record the time unit begin
+        checkstr = ""
+        for j in range(0, D):
+            checkstr = checkstr + "0"
+#################################################################################################3
+# record the time unit begin
         sqs.send_message(
             QueueUrl=log_url,
             DelaySeconds=0,
@@ -105,11 +91,11 @@ try:
                 )
                 # break
         sqs.delete_message(
-            QueueUrl=queue_url,
+            QueueUrl=task_url,
             ReceiptHandle=receipt_handle
         )
         print('processed and deleted message: %s' % taskUnit)
-        # record the time unit finish
+# record the time unit finish
         sqs.send_message(
                 QueueUrl=log_url,
                 DelaySeconds=0,
@@ -121,6 +107,7 @@ try:
                     "Unit " + str(taskUnit) + " end"
                 )
             )
+######################################################################################################
 except:
     sqs.send_message(
         QueueUrl=log_url,
@@ -141,7 +128,20 @@ except:
 
 
 
-
+# def compute(k):
+#     # i = i+1
+#     x = hashlib.sha256()
+#     y = hashlib.sha256()
+#     code = block + str(k)
+#     # code = block+"0000000000"
+#     # print ("code= ",code)
+#     x.update(code.encode("utf-8"))
+#     temstr = x.hexdigest()
+#     # print("temstr= ",temstr)
+#
+#     y.update(temstr.encode("utf-8"))
+#     result = y.hexdigest()
+#     return result
 
 # nonce = k
 # print >> "./out.txt", "nonce = ", nonce
