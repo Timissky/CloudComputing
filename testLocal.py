@@ -39,11 +39,11 @@ try:
         taskUnit = int(message['Body'])
         N = int(message['MessageAttributes']['Total']['StringValue'])
         D = int(message['MessageAttributes']['Difficulty']['StringValue'])
-        unitLength = int(67108864/ N)
+        unitLength = int(4294967296/ N)
         unitBegin = unitLength * (taskUnit - 1)
         #4294967296
         if taskUnit == N:
-            unitStop = 67108864 + 1
+            unitStop = 4294967296 + 1
         else:
             unitStop = unitLength * taskUnit
         checkstr = ""
