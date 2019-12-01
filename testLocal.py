@@ -1,7 +1,37 @@
 import hashlib
 import time
 import boto3
+import multiprocessing as mp
 
+def compute(unitBegin, unitStop, D, checkstr):
+    for num in range(unitBegin, unitStop, 1):
+        x = hashlib.sha256()
+        y = hashlib.sha256()
+        code = block + str(num)
+        # code = block+"0000000000"
+        # print ("code= ",code)
+        x.update(code.encode("utf-8"))
+        temstr = x.hexdigest()
+        # print("temstr= ",temstr)
+
+        y.update(temstr.encode("utf-8"))
+        result = y.hexdigest()
+        if result[0:D] == checkstr:
+            found = 1
+            print("nonce = %s" % num)
+            sqs.send_message(
+                QueueUrl=result_url,
+                DelaySeconds=0,
+                MessageGroupId=str(num),
+                MessageDeduplicationId=str(num),
+                MessageAttributes={
+                },
+                MessageBody=(
+                    str(num)
+                )
+            )
+            break
+    return
 
 # Difficulty
 # D = 8
@@ -63,33 +93,39 @@ try:
             )
         )
 
-        for num in range(unitBegin, unitStop, 1):
-            x = hashlib.sha256()
-            y = hashlib.sha256()
-            code = block + str(num)
-            # code = block+"0000000000"
-            # print ("code= ",code)
-            x.update(code.encode("utf-8"))
-            temstr = x.hexdigest()
-            # print("temstr= ",temstr)
-
-            y.update(temstr.encode("utf-8"))
-            result = y.hexdigest()
-            if result[0:D] == checkstr:
-                found = 1
-                print("nonce = %s" % num)
-                sqs.send_message(
-                    QueueUrl=result_url,
-                    DelaySeconds=0,
-                    MessageGroupId=str(num),
-                    MessageDeduplicationId=str(num),
-                    MessageAttributes={
-                    },
-                    MessageBody=(
-                        str(num)
-                    )
-                )
-                # break
+        P1 = mp.Process(target=compute,args=(unitBegin, unitBegin + int(0.5 * unitLength), D, checkstr))
+        P2 = mp.Process(target=compute,args=(unitBegin + int(0.5 * unitLength), unitStop, D, checkstr))
+        P1.start()
+        P2.start()
+        P1.join()
+        P2.join()
+        # for num in range(unitBegin, unitStop, 1):
+        #     x = hashlib.sha256()
+        #     y = hashlib.sha256()
+        #     code = block + str(num)
+        #     # code = block+"0000000000"
+        #     # print ("code= ",code)
+        #     x.update(code.encode("utf-8"))
+        #     temstr = x.hexdigest()
+        #     # print("temstr= ",temstr)
+        #
+        #     y.update(temstr.encode("utf-8"))
+        #     result = y.hexdigest()
+        #     if result[0:D] == checkstr:
+        #         found = 1
+        #         print("nonce = %s" % num)
+        #         sqs.send_message(
+        #             QueueUrl=result_url,
+        #             DelaySeconds=0,
+        #             MessageGroupId=str(num),
+        #             MessageDeduplicationId=str(num),
+        #             MessageAttributes={
+        #             },
+        #             MessageBody=(
+        #                 str(num)
+        #             )
+        #         )
+        #         break
         sqs.delete_message(
             QueueUrl=task_url,
             ReceiptHandle=receipt_handle
